@@ -9,7 +9,7 @@ website_name = {'tasteofhome': 0}
 class Scraper:
     def __init__(self, url):
         self.title = ''
-        self.ingredients
+        self.ingredients = []
 
         self.url = url
         response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -21,10 +21,6 @@ class Scraper:
         self.soup = bs4.BeautifulSoup(response.text, features="html.parser")
         
     def scrape_recipe(self):
-
-
-
-        recipe = Recipe()
         for k, v in website_name.items():
             if k in self.url:
                 # Title
@@ -35,11 +31,12 @@ class Scraper:
                 parent_heading, class_name, child_heading = website_ingredient_html_info[k][0], website_ingredient_html_info[k][1],website_ingredient_html_info[k][2]
                 for element in self.soup.find_all(parent_heading, class_=class_name):
                     for child_heading in element:
-                        self.elements.append(child_heading.get_text())
-        print(self.elements)
+                        self.ingredients.append(child_heading.get_text())
+        print("title: ", self.title)
+        print("Ingredients: ", self.ingredients)
 
-crape = Scraper('https://www.tasteofhome.com/recipes/best-ever-potato-soup/')
-crape.scrape_recipe()
+#crape = Scraper('https://www.tasteofhome.com/recipes/best-ever-potato-soup/')
+#crape.scrape_recipe()
 
 
 def taste_of_home(Web_recipe):

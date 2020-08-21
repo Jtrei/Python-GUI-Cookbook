@@ -79,10 +79,10 @@ class StartupGUI(tk.Tk):
         main_menu_bar.add_cascade(label=menus[1], menu=edit_sub_menu)
 
         self.frames = {}
-        # First GUI contains Login and Account Creation Frames
-        for F in (LoginPage, AccountCreationPage, Main_Page, Recipe_Browser, OnlineRecipeTool, Manual_Recipe_Adder): 
-            frame = F(container, self)
-            self.frames[F] = frame
+        gui_frames = [LoginPage, AccountCreationPage, Main_Page, Recipe_Browser, OnlineRecipeTool, Manual_Recipe_Adder]
+        for Frame in gui_frames: 
+            frame = Frame(container, self) 
+            self.frames[Frame] = frame # self.frames[LoginPage] = LoginPage[container, self]
             frame.grid(row=0, column=0, sticky='nsew')
 
         # Start program by showing login page
@@ -90,10 +90,10 @@ class StartupGUI(tk.Tk):
 
     def show_frame(self, cont):
         frame = self.frames[cont]
-        frame.tkraise()
-        frame.winfo_toplevel().geometry("")
+        frame.tkraise()            
 
     def menu_check(self, page):
+        # If the user has not logged in yet and updated their current user info, the menu should not lead to additional pages.
         if current_user_info['username'] != '':
             self.show_frame(page)
 
@@ -127,11 +127,12 @@ class LoginPage(tk.Frame):
         # Label holder for login error handling responses
         self.log_response = tk.Label(self, text='foo') 
 
+        # Searches login database to see if previous user wanted to remain logged in. The .keep_logged_in method below
+        # ensures that only one user will have a "1" value in the database column for keep_logged. If so, the fields will
+        # become pre-populated.
         self.if_stay_logged_skip_screen()
     
-    # Searches login database to see if previous user wanted to remain logged in. The .keep_logged_in method below
-    # ensures that only one user will have a "1" value in the database column for keep_logged. If so, the fields will
-    # become pre-populated.
+
     def if_stay_logged_skip_screen(self): 
         database_query = Database(file_path_to_database)
         username, password, keep_logged = database_query.query_on_startup()
@@ -455,7 +456,7 @@ def main_program():
     main_app = StartupGUI()
     main_app.title("Cookin' Bookin'")
     width, height = int(main_app.winfo_screenwidth()//1.5), int(main_app.winfo_screenheight()//1.5)
-    main_app.geometry(f'{width}x{height}')
+    main_app.geometry(f'300x200')
     main_app.mainloop()
 
 if __name__ == "__main__":
