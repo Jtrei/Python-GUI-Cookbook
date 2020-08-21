@@ -1,5 +1,8 @@
 class Recipe:
-    def __init__(self, website_name, title, cuisine, cook_time, servings, serving_size, ingredients, directions,
+    def __init__(self):
+        pass
+
+    def input(self, website_name, title, cuisine, cook_time, servings, serving_size, ingredients, directions,
                  nutrition_info, notes, picture):
         self.rec_id: int = 0
         self.website_name: str = website_name

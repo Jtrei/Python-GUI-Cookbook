@@ -1,100 +1,46 @@
-#! python3.8
-# WebExtraction.py - This program will collect recipes on a given page
-
 import os, bs4, requests
+from Recipe_Classes import *
 
-# Initialization of Iterator elements, Web_recipe class object, and Recipe Storage Directory
-elements = 0
-#Web_recipe = Recipe('', '', '', '', '', '', '', '', '', '', '', '')
+website_title_html_info = {"tasteofhome": ['h1', 'recipe-title']}
+website_ingredient_html_info = {"tasteofhome": ['ul', 'recipe-ingredients__list recipe-ingredients__collection splitColumns', 'li'],}
 
-def obtain_website_to_scrape():
-    website = input("Please paste website link to extract recipe (omit - https://www.): ")
-    website = f"https://www.{website}"
-    res = requests.get(website)
-    res.raise_for_status()
-    soup = bs4.BeautifulSoup(res.text, features="html.parser")
-    return website
+website_name = {'tasteofhome': 0}
 
-def CleanAndPresentVariables(ListOrString):
-    return ListOrString
-# All htmlParsing definitions are defined by the element and class name -> i.e. H1 for 'h1', C for class, etc...
+class Scraper:
+    def __init__(self, url):
+        self.title = ''
+        self.ingredients
 
-def H1_C_ParseString(html_class):
-    global elements, soup
-    elementSearch = soup.find('h1', {'class': html_class})
-    for i in elementSearch:
-        a = bs4.BeautifulSoup(str(i), features="html.parser").get_text()
-    elements += 1
-    a = CleanAndPresentVariables(a)
-    return a
-def div_C_ParseString(html_class):
-    global elements, soup
-    elementSearch = soup.find('div', {'class': html_class})
-    for i in elementSearch:
-        a = bs4.BeautifulSoup(str(i), features="html.parser").get_text()
-    elements += 1
-    a = CleanAndPresentVariables(a)
-    return a
-def div_C_ParseList(html_class):
-    global elements, soup
-    a = []
-    elementSearch = soup.find('div', {'class': html_class})
-    for i in elementSearch:
-        b = bs4.BeautifulSoup(str(i), features="html.parser").get_text()
-        a.append(b)
-    elements += 1
-    print(a)
-    a = CleanAndPresentVariables(a)
-    return a
-def ul_C_ParseList(html_class):
-    global elements, soup
-    a = []
-    elementSearch = soup.find("ul", {"class": html_class})
-    for i in elementSearch:
-        b = bs4.BeautifulSoup(str(i), features="html.parser").get_text()
-        a.append(b)
-    elements += 1
-    a = CleanAndPresentVariables(a)
-    return a
-def span_C_ParseString(html_class):
-    global elements, soup
-    elementSearch = soup.find('span', {'class': html_class})
-    for i in elementSearch:
-        a = bs4.BeautifulSoup(str(i), features="html.parser").get_text()
-    elements += 1
-    return CleanAndPresentVariables(a)
-def li_C_ParseList(html_class):
-    global elements, soup
-    a = []
-    elementSearch = soup.find_all("li", {"class": html_class})
-    for i in elementSearch:
-        b = bs4.BeautifulSoup(str(i), features="html.parser").get_text()
-        a.append(b)
-    elements += 1
-    print(a)
-    a = CleanAndPresentVariables(a)
-    print(a)
-    return a
-def label_C_ParseList(html_class):
-    global elements, soup
-    a = []
-    elementSearch = soup.find_all("label", {"class": html_class})
-    for i in elementSearch:
-        b = bs4.BeautifulSoup(str(i), features="html.parser").get_text()
-        a.append(b)
-    elements += 1
-    a = CleanAndPresentVariables(a)
-    return a
-def span_C_ParseList(html_class):
-    global elements, soup
-    a = []
-    elementSearch = soup.find_all("span", {"class": html_class})
-    for i in elementSearch:
-        b = bs4.BeautifulSoup(str(i), features="html.parser").get_text()
-        a.append(b)
-    elements += 1
-    a = CleanAndPresentVariables(a)
-    return a
+        self.url = url
+        response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+        try:
+            response.raise_for_status()
+        except ConnectionError:
+            print("Error")
+
+        self.soup = bs4.BeautifulSoup(response.text, features="html.parser")
+        
+    def scrape_recipe(self):
+
+
+
+        recipe = Recipe()
+        for k, v in website_name.items():
+            if k in self.url:
+                # Title
+                parent_heading, class_name = website_title_html_info[k][0], website_title_html_info[k][1]
+                for element in self.soup.find_all(parent_heading, class_=class_name):
+                    self.title
+                # Ingredients
+                parent_heading, class_name, child_heading = website_ingredient_html_info[k][0], website_ingredient_html_info[k][1],website_ingredient_html_info[k][2]
+                for element in self.soup.find_all(parent_heading, class_=class_name):
+                    for child_heading in element:
+                        self.elements.append(child_heading.get_text())
+        print(self.elements)
+
+crape = Scraper('https://www.tasteofhome.com/recipes/best-ever-potato-soup/')
+crape.scrape_recipe()
+
 
 def taste_of_home(Web_recipe):
     global elements

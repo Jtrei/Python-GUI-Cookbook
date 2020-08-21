@@ -1,6 +1,7 @@
 {
     "python.pythonPath": "C:\\Users\\Jacob\\Miniconda3\\envs\\Cookbook\\python.exe",
     "cSpell.words": [
+        "chdir",
         "nsew",
         "onvalue",
         "sqlite",

@@ -85,13 +85,13 @@ class StartupGUI(tk.Tk):
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky='nsew')
 
-
+        # Start program by showing login page
         self.show_frame(LoginPage)
 
     def show_frame(self, cont):
         frame = self.frames[cont]
         frame.tkraise()
-        #            frame.winfo_toplevel().geometry("")
+        frame.winfo_toplevel().geometry("")
 
     def menu_check(self, page):
         if current_user_info['username'] != '':
@@ -133,8 +133,8 @@ class LoginPage(tk.Frame):
     # ensures that only one user will have a "1" value in the database column for keep_logged. If so, the fields will
     # become pre-populated.
     def if_stay_logged_skip_screen(self): 
-        last_use_db = Database(file_path_to_database)
-        username, password, keep_logged = last_use_db.query_on_startup()
+        database_query = Database(file_path_to_database)
+        username, password, keep_logged = database_query.query_on_startup()
         if keep_logged == '1':
             self.username_entry.insert(0, f"{username}")
             self.password_entry.insert(0, f"{password}")
@@ -352,10 +352,11 @@ class Manual_Recipe_Adder(tk.Frame):
         self.submit_recipe_button = tk.Button(self, text='Add Recipe', command=lambda: self.create_recipe())
         self.submit_recipe_button.grid(row=11, column=0, columnspan=4)
 
-        self.counter = 0
+        self.counter = 1
 
     def create_recipe(self):
-        recipe = Recipe(self.website_title_entry.get(), self.title_entry.get(), self.cuisine_entry.get(),
+        recipe = Recipe()
+        recipe.input(self.website_title_entry.get(), self.title_entry.get(), self.cuisine_entry.get(),
                   self.cook_time_entry.get(), self.servings_entry.get(), self.serving_size_entry.get(),
                   self.nutrition_info_entry.get(), self.picture_entry.get(), self.recipe_element_value[0],
                   self.recipe_element_value[1], self.recipe_element_value[2])
@@ -366,19 +367,19 @@ class Manual_Recipe_Adder(tk.Frame):
         self.file_writer(file_name, recipe)
 
     def determine_rec_ID(self):
-        det_rec_ID_db = UserDatabase()
-        rec_ID = det_rec_ID_db.rec_ID_return(set_db_path(folder_path_to_database))
+        unique_database_ID = Database(file_path_to_database)
+        rec_ID = unique_database_ID.rec_ID_return()
 
     def determine_file_name(self, recipe):
         if not os.path.exists(f'{recipe}.txt'):
             file_name = f'{recipe}.txt'
         else:
-            if os.path.exists(f'{recipe}.txt'):
-                counter += 1
-                if not os.path.exists(f'{recipe}_{counter}.txt'):
-                    file_name = f'{recipe}_{counter}.txt'
-                else:
-                    self.determine_file_name(recipe)
+            while True:
+                self.counter += 1
+                if not os.path.exists(f'{recipe}_{self.counter}.txt'):
+                    file_name = f'{recipe}_{self.counter}.txt'
+                    self.counter = 1
+                    break
         return file_name
 
     def file_writer(self, file_name, recipe):
