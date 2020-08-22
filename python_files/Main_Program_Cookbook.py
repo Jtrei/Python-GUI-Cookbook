@@ -234,55 +234,49 @@ class Main_Page(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.controller = controller
 
-        self.welcome_label = tk.Label(self, text='Welcome to my cooking app. It is a WIP. Here are some pictures of food')
-        self.welcome_label.grid(row=0, column=0, columnspan=4, sticky=tk.W)
-
-        self.pic_frame = tk.Frame(self, width=300, height=100)
-        self.pic_frame.grid(row=1, column=0, columnspan=4, sticky=tk.W)
-'''
         self.pic_index = 0
+
+
+
+        # Eventual plans will have the main page access the database and pull photos from the user's recipe collection
+        '''
         self.photos = [photo for photo in os.listdir(current_user_info['recipe_picture_folder_file_path']) if os.path.isfile]
         self.photo_length = len(self.photos)
         if self.photo_length > 0:
+            self.welcome_label = tk.Label(self, text="Welcome to my cooking app. Looks yummy.")
+            self.welcome_label.grid(row=0, column=0, columnspan=4, sticky=tk.W)
             self.display_picture = self.photos[self.pic_index]
             self.my_image = ImageTk.PhotoImage(Image.open(f"{current_user_info['recipe_picture_folder_file_path']}\\{self.display_picture}"))
-            self.myLabel = tk.Label(self.pic_frame, image=self.my_image)
+            self.myLabel = tk.Label(self, image=self.my_image)
             self.myLabel.grid(row=1, column=0, columnspan=4)
 
-            button_back = tk.Button(self.pic_frame, text='<', command=self.pic_previous)
+            button_back = tk.Button(self, text='<', command=self.pic_previous('backward'))
             button_back.grid(row=3, column=1)
-            button_forward = tk.Button(self.pic_frame, text='>', command=self.pic_forward)
+            button_forward = tk.Button(self, text='>', command=self.pic_forward('forward'))
             button_forward.grid(row=3, column=3)
 
-            self.status = tk.Label(self.pic_frame, text=f'Image: {self.display_picture}', bd=1, relief=tk.SUNKEN)
+            self.status = tk.Label(self, text=f'Image: {self.display_picture}', bd=1, relief=tk.SUNKEN)
             self.status.grid(row=4, column=0, columnspan=4)
+        else:
+            self.welcome_label = tk.Label(self, text="Welcome to my cooking app. It is a WIP. Your recipe's photos will appear here once you add some recipes")
+            self.welcome_label.grid(row=0, column=0, columnspan=4, sticky=tk.W)
+            
 
-    def pic_forward(self):
+    def pic_change(self, val):
         self.myLabel.grid_forget()
         self.status.grid_forget()
-        
-        self.pic_index += 1
+        if val == 'forward':
+            self.pic_index += 1
+        elif val == 'backward':
+            self.pic_index -= 1
         self.display_picture = self.photos[self.pic_index]
         self.my_image = ImageTk.PhotoImage(Image.open(f"{current_user_info['recipe_picture_folder_file_path']}\\{self.display_picture}"))
 
-        self.myLabel = tk.Label(self.pic_frame, image=self.my_image)
+        self.myLabel = tk.Label(self, image=self.my_image)
         self.myLabel.grid(row=1, column=0, columnspan=4)
-        self.status = tk.Label(self.pic_frame, text=f'Image: {self.display_picture}', bd=1, relief=tk.SUNKEN)
+        self.status = tk.Label(self, text=f'Image: {self.display_picture}', bd=1, relief=tk.SUNKEN)
         self.status.grid(row=4, column=0, columnspan=4)
-
-    def pic_previous(self):
-        self.myLabel.grid_forget()
-        self.status.grid_forget()
-        
-        self.pic_index -= 1
-        self.display_picture = self.photos[self.pic_index]
-        self.my_image = ImageTk.PhotoImage(Image.open(f"{current_user_info['recipe_picture_folder_file_path']}\\{self.display_picture}"))
-
-        self.myLabel = tk.Label(self.pic_frame, image=self.my_image)
-        self.myLabel.grid(row=1, column=0, columnspan=4)
-        self.status = tk.Label(self.pic_frame, text=f'Image: {self.display_picture}', bd=1, relief=tk.SUNKEN)
-        self.status.grid(row=4, column=0, columnspan=4)
-'''
+        '''
 
 class RecipeList(tk.Frame):
     def __init__(self, parent, controller):
@@ -456,7 +450,7 @@ def main_program():
     main_app = StartupGUI()
     main_app.title("Cookin' Bookin'")
     width, height = int(main_app.winfo_screenwidth()//1.5), int(main_app.winfo_screenheight()//1.5)
-    main_app.geometry(f'300x200')
+    main_app.geometry(f'400x400')
     main_app.mainloop()
 
 if __name__ == "__main__":
