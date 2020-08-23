@@ -20,7 +20,15 @@ class Database:
 
     # ACM
     def add_new_account(self, username, password, recipe_pathway): # Logger.add_new_account(username, password, recipe_pathway)
-        user_id: str = self.check_return_ID()
+        def check_return_ID(): # Used to calculate unique ID code per account
+            connection = sqlite3.connect(self.pathway)
+            cursor = connection.cursor()
+            cursor.execute("SELECT COUNT (*) FROM Login")  
+            result = cursor.fetchall()
+            connection.close()
+            return str(((result[0])[0])+1)
+
+        user_id: str = check_return_ID()
         logged_in: str = '0'
         connection = sqlite3.connect(self.pathway)
         cursor = connection.cursor()
@@ -28,14 +36,7 @@ class Database:
         connection.commit()
         connection.close()
 
-        # ACM
-        def check_return_ID(self): # Used to calculate unique ID code per account
-            connection = sqlite3.connect(self.pathway)
-            cursor = connection.cursor()
-            cursor.execute("SELECT COUNT (*) FROM Login")  
-            result = cursor.fetchall()
-            connection.close()
-            return str(((result[0])[0])+1)
+
 
     # ACM
     def create_new_recipe_database(self, username):
@@ -86,7 +87,6 @@ class Database:
             if username == entry[0] and password == entry[1]:
                 username_db, password_db = entry[0], entry[1]
                 return username_db, password_db
-        return username, password
 
     def update_logged_in(self, username):
         connection = sqlite3.connect(self.pathway)

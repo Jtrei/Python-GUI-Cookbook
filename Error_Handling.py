@@ -1,3 +1,5 @@
+import os
+
 def account_creation_error(username, password, password_confirmation, user_folder):
     if len(username) < 4:
         text_response = 'Please enter a 4 character or longer username.'

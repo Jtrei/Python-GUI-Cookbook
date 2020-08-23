@@ -1,6 +1,5 @@
 import configparser
 import sys
-import os
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
@@ -20,7 +19,10 @@ folder_path_to_database: str = os.path.join(folder_path_to_data_folder, 'Databas
 # Files
 file_path_to_database: str = os.path.join(folder_path_to_database, 'Global.db')                              # .\Data\Database\Global.db
 # Data Structures
-current_user_info: dict = {'username':'','recipe_folder_file_path':'','recipe_database_file_path':'','recipe_picture_folder_file_path':''}
+current_user_info: dict = {'username':'','recipe folder file path':'','recipe database file path':'','recipe picture folder file path':''}
+# Widget_positioning
+x_in = 10
+y_down = 3
 
 
 # --- Startup Functions --- Create directories, files, and database if not already existing
@@ -89,8 +91,6 @@ class StartupGUI(tk.Tk):
         # Start program by showing login page
         self.show_frame(LoginPage)
 
-
-
     def show_frame(self, cont):
         frame = self.frames[cont]
         frame.tkraise()            
@@ -108,35 +108,26 @@ class LoginPage(tk.Frame):
         username_label = tk.Label(self, text='Username: ')
         username_label.grid(row=0, column=0, pady=(10, 0), padx=10, sticky='w')
         self.username_entry = tk.Entry(self, width=30)
-        self.username_entry.grid(row=0, column=1, padx=10)
+        self.username_entry.grid(row=0, column=1, padx=x_in)
         self.username_entry.focus()
 
         password_label = tk.Label(self, text='Password: ')
-        password_label.grid(row=1, column=0, padx=10, sticky='w')
+        password_label.grid(row=1, column=0, padx=x_in, sticky='w')
         self.password_entry = tk.Entry(self, show='*', width=30)
-        self.password_entry.grid(row=1, column=1, padx=10)
+        self.password_entry.grid(row=1, column=1, padx=x_in)
 
         var1 = tk.IntVar()
         self.keep_logged_ckb = tk.Checkbutton(self, text='Keep signed in?', variable=var1, onvalue=1, offvalue=0)
-        self.keep_logged_ckb.grid(row=2, column=0, columnspan=2)
+        self.keep_logged_ckb.grid(row=2, column=1, padx=x_in, pady=y_down, sticky='w'+'e')
 
-        enter_login = tk.Button(self, text="Submit", command=lambda:
-        self.login_function(self.username_entry.get(), self.password_entry.get(), var1.get(), parent))
-        enter_login.grid(row=3, column=0, columnspan=2, pady=2)
-
+        enter_login = tk.Button(self, text="Submit", command=lambda: self.login_function(self.username_entry.get(), self.password_entry.get(), var1.get()))
+        enter_login.grid(row=3, column=1, padx=x_in, pady=y_down, sticky='w'+'e')
         create_account = tk.Button(self, text='Create Account', command=lambda: controller.show_frame(AccountCreationPage))
-        create_account.grid(row=4, column=0, columnspan=2, pady=2)
-
-        # Label holder for login error handling responses
-        self.log_response = tk.Label(self, text='foo') 
+        create_account.grid(row=4, column=1, padx=x_in, pady=y_down, sticky='w'+'e')
 
         # Searches login database to see if previous user wanted to remain logged in. The .keep_logged_in method below
         # ensures that only one user will have a "1" value in the database column for keep_logged. If so, the fields will
         # become pre-populated.
-        self.if_stay_logged_skip_screen()
-    
-
-    def if_stay_logged_skip_screen(self): 
         database_query = Database(file_path_to_database)
         username, password, keep_logged = database_query.query_on_startup()
         if keep_logged == '1':
@@ -144,81 +135,55 @@ class LoginPage(tk.Frame):
             self.password_entry.insert(0, f"{password}")
             self.keep_logged_ckb.select()
         
-        
-    def login_function(self, username, password, keep_logged, parent):
+    def login_function(self, username, password, keep_logged):
         global current_user_info
-        self.log_response.destroy()
-        # Checks to see if user wishes to remain logged in. Sets database value to "1" for user and "0" for others
-        if keep_logged == 1:
-            self.keep_logged_in(username)
-
-        login_db_checker = Database(file_path_to_database)
-        username_db, password_db = login_db_checker.login(username, password)
-        if username_db == username and password_db == password:
-            # Constructs dictionary with username and file/directory locations for access in second app. 
-            current_user_info = self.initialize_user_information(username)
-            self.controller.show_frame(Main_Page)
-        else:
+        login_database_checker_updater = Database(file_path_to_database)
+        try:
+            username_db, password_db = login_database_checker_updater.login(username, password)
+            if username_db == username and password_db == password: 
+                if keep_logged == 1:
+                    # Checks to see if user wishes to remain logged in. Sets database value to "1" for user and "0" for others
+                    login_database_checker_updater.update_logged_in(username)
+                current_user_info['username'] = username
+                current_user_info['recipe folder file path'] = f'{folder_path_to_database}\\{username}_Recipes'
+                current_user_info['recipe database file path'] = f'{user_folder}\\{username}.db'
+                current_user_info['recipe picture folder file path'] = f'{user_folder}\\Recipe_Pictures'
+                self.controller.show_frame(Main_Page)
+        # Occurs when there is no database match resulting in no return of username_db and password_db
+        except TypeError: 
             error = login_error(username, password)
+            self.log_response = tk.Label(self, text='Dummy response whose only purpose is to be destroyed') 
+            self.log_response.destroy()
             self.log_response = tk.Label(self, text=error)
-            self.log_response.grid(row=6, column=0, columnspan=2)
-    
-    def initialize_user_information(self, username):
-        global current_user_info
-        
-        user_folder = f'{folder_path_to_database}\\{username}_Recipes'
-        user_recipe_db = f'{user_folder}\\{username}.db'
-        user_recipe_pictures = f'{user_folder}\\Recipe_Pictures'
-
-        current_user_info['username'] = username
-        current_user_info['recipe_folder_file_path'] = user_folder
-        current_user_info['recipe_database_file_path'] = user_recipe_db
-        current_user_info['recipe_picture_folder_file_path'] = user_recipe_pictures
-
-        return current_user_info
-
-    def keep_logged_in(self, username):
-        login_db = Database(file_path_to_database)
-        login_db.update_logged_in(username)
+            self.log_response.grid(row=6, column=0, columnspan=2, padx=x_in, sticky='w')
 
 class AccountCreationPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
 
-        username_label = tk.Label(self, text='Username: ')
-        username_label.grid(row=0, column=0, padx=10, sticky='w')
-        self.username_entry = tk.Entry(self, width=30)
-        self.username_entry.grid(row=0, column=1, padx=10)
-        self.username_entry.focus()
+        labels = ['Username: ', 'Password: ', 'Password Confirm: ']
+        for i, label_name in enumerate(labels):
+            label = tk.Label(self, text=label_name)
+            label.grid(row=i, column=0, padx=x_in, pady=y_down, sticky='w')
 
-        password_label = tk.Label(self, text='Password: ')
-        password_label.grid(row=1, column=0, padx=10, sticky='w')
-        self.password_entry = tk.Entry(self, show='*', width=30)
-        self.password_entry.grid(row=1, column=1, padx=10)
-
-        password_confirm_label = tk.Label(self, text='Password Confirm: ')
-        password_confirm_label.grid(row=2, column=0, padx=10, sticky='w')
-        self.password_confirm_entry = tk.Entry(self, show='*', width=30)
-        self.password_confirm_entry.grid(row=2, column=1, padx=10)
-
-        create_account_confirmation = tk.Button(self, text="Submit", command=lambda:
-                                      self.account_creation_function(self.username_entry.get(),
-                                      self.password_entry.get(), self.password_confirm_entry.get()))
-        create_account_confirmation.grid(row=3, column=0, columnspan=2, pady=5)
+        username_entry = tk.Entry(self, width=30)
+        username_entry.grid(row=0, column=1, padx=x_in, pady=y_down)
+        username_entry.focus()
+        password_entry = tk.Entry(self, show='*', width=30)
+        password_entry.grid(row=1, column=1, padx=x_in, pady=y_down)
+        password_confirm_entry = tk.Entry(self, show='*', width=30)
+        password_confirm_entry.grid(row=2, column=1, padx=x_in, pady=y_down)
 
         return_to_login_button = tk.Button(self, text='Return to Login', command=lambda: controller.show_frame(LoginPage))
-        return_to_login_button.grid(row=4, column=0, columnspan=2, pady=10)
+        return_to_login_button.grid(row=3, column=0, columnspan=1, padx=x_in, pady=y_down, sticky='w'+'e')
+        create_account_confirmation = tk.Button(self, text="Submit", command=lambda: self.account_creation_function(username_entry.get(), password_entry.get(), password_confirm_entry.get()))
+        create_account_confirmation.grid(row=3, column=1, columnspan=1, padx=x_in, pady=y_down, sticky='w'+'e')
 
-        self.account_creation_response = tk.Label(self, text='foo')
-
-    def account_creation_function(self, username, password, password_confirmation):
-        self.account_creation_response.destroy()
-        
+    def account_creation_function(self, username, password, password_confirmation):        
         user_folder = f'{folder_path_to_database}\\{username}_Recipes'
         user_recipe_db = f'{user_folder}\\{username}.db'
         user_recipe_pictures = f'{user_folder}\\Recipe_Pictures'
-
         if password == password_confirmation and len(username) > 3 and len(password) > 3 and not os.path.exists(user_folder):
             os.mkdir(user_folder)
             os.mkdir(user_recipe_pictures)
@@ -229,8 +194,10 @@ class AccountCreationPage(tk.Frame):
             return self.controller.show_frame(LoginPage)
         else: # Error handling if username and password combination is too short, if password does not match, or username is taken
             text_response = account_creation_error(username, password, password_confirmation, user_folder)
+            self.account_creation_response = tk.Label(self, text='Dummy response whose only purpose is to be destroyed')
+            self.account_creation_response.destroy()
             self.account_creation_response = tk.Label(self, text=text_response)
-            self.account_creation_response.grid(row=5, column=0, columnspan=2, pady=10)
+            self.account_creation_response.grid(row=5, column=0, columnspan=4, padx=x_in, pady=y_down, sticky='w')
 
 class Main_Page(tk.Frame):
     def __init__(self, parent, controller):
@@ -243,13 +210,13 @@ class Main_Page(tk.Frame):
 
         # Eventual plans will have the main page access the database and pull photos from the user's recipe collection
         '''
-        self.photos = [photo for photo in os.listdir(current_user_info['recipe_picture_folder_file_path']) if os.path.isfile]
+        self.photos = [photo for photo in os.listdir(current_user_info['recipe picture folder file path']) if os.path.isfile]
         self.photo_length = len(self.photos)
         if self.photo_length > 0:
             self.welcome_label = tk.Label(self, text="Welcome to my cooking app. Looks yummy.")
             self.welcome_label.grid(row=0, column=0, columnspan=4, sticky=tk.W)
             self.display_picture = self.photos[self.pic_index]
-            self.my_image = ImageTk.PhotoImage(Image.open(f"{current_user_info['recipe_picture_folder_file_path']}\\{self.display_picture}"))
+            self.my_image = ImageTk.PhotoImage(Image.open(f"{current_user_info['recipe picture folder file path']}\\{self.display_picture}"))
             self.myLabel = tk.Label(self, image=self.my_image)
             self.myLabel.grid(row=1, column=0, columnspan=4)
 
@@ -273,7 +240,7 @@ class Main_Page(tk.Frame):
         elif val == 'backward':
             self.pic_index -= 1
         self.display_picture = self.photos[self.pic_index]
-        self.my_image = ImageTk.PhotoImage(Image.open(f"{current_user_info['recipe_picture_folder_file_path']}\\{self.display_picture}"))
+        self.my_image = ImageTk.PhotoImage(Image.open(f"{current_user_info['recipe picture folder file path']}\\{self.display_picture}"))
 
         self.myLabel = tk.Label(self, image=self.my_image)
         self.myLabel.grid(row=1, column=0, columnspan=4)
@@ -298,10 +265,10 @@ class Manual_Recipe_Adder(tk.Frame):
             label.grid(row=i, column=0, padx=5, pady=5)
             if key not in ['ingredients', 'directions', 'notes']:
                 widget_entry[key] = tk.Entry(self, width=element_length)
-                widget_entry[key].grid(row=i, column=1, padx=5, pady=5)
+                widget_entry[key].grid(row=i, column=1, padx=x_in, pady=y_down)
             else:
                 widget_entry[key] = tk.Button(self, text=f'Add {key}', command=lambda: self.add_long_recipe_element(parent, key), width=element_length)
-                widget_entry[key].grid(row=i, column=1, columnspan=2, padx=5, pady=5)
+                widget_entry[key].grid(row=i, column=1, columnspan=2, padx=x_in, pady=y_down)
 
         self.recipe_element_value = ['','','']
         self.submit_recipe_button = tk.Button(self, text='Add Recipe', command=lambda: self.create_recipe())
@@ -385,19 +352,6 @@ class Manual_Recipe_Adder(tk.Frame):
 class Recipe_Browser(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-
-    list_of_websites = []
-    recipe_titles = []
-    cuisine = []
-    cook_times = []
-    servings = []
-    serving_sizes = []
-    ingredients = []
-    nutrition = []
-
-    browse_by_recipe_elements = {'website_name': list_of_websites, 'title': recipe_titles, 'cuisine': cuisine,
-                                 'cook_time': cook_times, 'servings': servings, 'serving_size': serving_sizes,
-                                 'ingredients': ingredients, 'nutrition': nutrition}
 
 class OnlineRecipeTool(tk.Frame):
     def __init__(self, parent, controller):
