@@ -1,13 +1,17 @@
+import configparser
+import sys
+import os
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
-from WebsiteRecipeExtractor import *
-import sys
-import configparser
+
 from PIL import Image, ImageTk
-from Recipe_Classes import *
-from Database_Class import *
+
+from Class_Database import *
+from Class_Recipe import *
 from Error_Handling import *
+from Extractor import *
+
 
 # GLOBALS: Directories
 folder_path_to_data_folder = os.path.join(os.getcwd(), 'Data')                                               # .\Data
@@ -49,34 +53,31 @@ def startup_settings():
 class StartupGUI(tk.Tk): 
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
+
+        def submenu_configuration(submenu_items, menu):
+            for i, (key, value) in enumerate(submenu_items.items()):
+                menu.add_command(label=key, command=lambda: self.menu_check(value))    
+
         container = tk.Frame(self)
         container.pack(side="top", fill='both', expand=True)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
 
-        main_menu_bar = tk.Menu(container)
-        tk.Tk.config(self, menu=main_menu_bar)
+        upper_menu_bar = tk.Menu(container)
+        tk.Tk.config(self, menu=upper_menu_bar)
+        drop_down_headers = ('Recipes', 'Edit')
+        
+        recipe_sub_menu = tk.Menu(upper_menu_bar, tearoff=0)
+        recipe_submenu_buttons = {'Add recipe': Manual_Recipe_Adder, 'Add recipe from website': OnlineRecipeTool, 'Browse recipes': RecipeList,
+                                  'Import Recipes (from text file)': '', 'Export Recipes (to PDF)': ''}
+        submenu_configuration(recipe_submenu_buttons, recipe_sub_menu)
+        upper_menu_bar.add_cascade(label='Recipes', menu=recipe_sub_menu)
 
-        submenus = (
-            ('Add Recipe Manually', 'Add Recipe from Website', 'Browse Recipes', 'Import Recipes (from file)', 'Export Recipes (to file)'),  # submenus[0][0-4]
-            ('Edit Recipe', 'Edit Settings', 'Edit View'))  # submenus[1][0-2]
-        recipe_sub_menu = tk.Menu(main_menu_bar, tearoff=0)
-        recipe_sub_menu.add_command(label=submenus[0][0], command=lambda: self.menu_check(Manual_Recipe_Adder))
-        recipe_sub_menu.add_command(label=submenus[0][1], command=lambda: self.menu_check(OnlineRecipeTool))
-        recipe_sub_menu.add_separator()
-        recipe_sub_menu.add_command(label=submenus[0][2], command=lambda: self.menu_check(RecipeList))
-        recipe_sub_menu.add_separator()
-        recipe_sub_menu.add_command(label=submenus[0][3])
-        recipe_sub_menu.add_command(label=submenus[0][4])
-        edit_sub_menu = tk.Menu(main_menu_bar, tearoff=0)
-        edit_sub_menu.add_command(label=submenus[1][0])
-        edit_sub_menu.add_separator()
-        edit_sub_menu.add_command(label=submenus[1][1])
-        edit_sub_menu.add_command(label=submenus[1][2])
+        edit_sub_menu = tk.Menu(upper_menu_bar, tearoff=0)
+        edit_submenu_buttons = {'Edit Recipe': '', 'Edit Settings': '', 'Edit View': ''}
+        submenu_configuration(edit_submenu_buttons, edit_sub_menu)
+        upper_menu_bar.add_cascade(label=drop_down_headers[1], menu=edit_sub_menu)
 
-        menus = ('Recipes', 'Edit')
-        main_menu_bar.add_cascade(label=menus[0], menu=recipe_sub_menu)
-        main_menu_bar.add_cascade(label=menus[1], menu=edit_sub_menu)
 
         self.frames = {}
         gui_frames = [LoginPage, AccountCreationPage, Main_Page, Recipe_Browser, OnlineRecipeTool, Manual_Recipe_Adder]
@@ -87,6 +88,8 @@ class StartupGUI(tk.Tk):
 
         # Start program by showing login page
         self.show_frame(LoginPage)
+
+
 
     def show_frame(self, cont):
         frame = self.frames[cont]
@@ -286,77 +289,34 @@ class Manual_Recipe_Adder(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
-        label_len = 23
-        recipe_elements = ['ingredients', 'directions', 'notes']
-
-        website_title_label = tk.Label(self, text='Website title (Ex. All Recipes): ', anchor='w', width=label_len)
-        website_title_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
-        title_label = tk.Label(self, text='Recipe title: ', anchor='w', width=label_len)
-        title_label.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
-        cuisine_label = tk.Label(self, text='Cuisine type (Ex. American): ', anchor='w', width=label_len)
-        cuisine_label.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
-        cook_time_label = tk.Label(self, text='Cook Time (minutes, rounded): ', anchor='w', width=label_len)
-        cook_time_label.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
-        servings_label = tk.Label(self, text='Servings (grams, rounded): ', anchor='w', width=label_len)
-        servings_label.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
-        serving_size_label = tk.Label(self, text='Serving Size: ', anchor='w', width=label_len)
-        serving_size_label.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
-        nutrition_info_label = tk.Label(self, text='Nutrition: ', anchor='w', width=label_len)
-        nutrition_info_label.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
-        picture_label = tk.Label(self, text='Picture: ', anchor='w', width=label_len)
-        picture_label.grid(row=7, column=0, columnspan=2, padx=5, pady=5)
-
-        self.website_title_entry = tk.Entry(self)
-        self.website_title_entry.grid(row=0, column=2, columnspan=2, padx=5, pady=5)
-        self.title_entry = tk.Entry(self)
-        self.title_entry.grid(row=1, column=2, columnspan=2, padx=5, pady=5)
-        self.cuisine_entry = tk.Entry(self)
-        self.cuisine_entry.grid(row=2, column=2, columnspan=2, padx=5, pady=5)
-        self.cook_time_entry = tk.Entry(self)
-        self.cook_time_entry.grid(row=3, column=2, columnspan=2, padx=5, pady=5)
-        self.servings_entry = tk.Entry(self)
-        self.servings_entry.grid(row=4, column=2, columnspan=2, padx=5, pady=5)
-        self.serving_size_entry = tk.Entry(self)
-        self.serving_size_entry.grid(row=5, column=2, columnspan=2, padx=5, pady=5)
-        self.nutrition_info_entry = tk.Entry(self)
-        self.nutrition_info_entry.grid(row=6, column=2, columnspan=2, padx=5, pady=5)
-        self.picture_entry = tk.Entry(self)
-        self.picture_entry.grid(row=7, column=2, columnspan=2, padx=5, pady=5)
-
-        ingredients_label = tk.Label(self, text='Ingredients: ', anchor='w', width=label_len)
-        ingredients_label.grid(row=8, column=0, columnspan=2, padx=5, pady=5)
-        directions_label = tk.Label(self, text='Directions: ', anchor='w', width=label_len)
-        directions_label.grid(row=9, column=0, columnspan=2, padx=5, pady=5)
-        notes_label = tk.Label(self, text='Notes: ', anchor='w', width=label_len)
-        notes_label.grid(row=10, column=0, columnspan=2, padx=5, pady=5)
-
-        self.ingredients_entry = tk.Button(self, text='Add Ingredients', command=lambda: self.add_recipe_element_Ing_Dir_Note(parent, recipe_elements[0]))
-        self.ingredients_entry.grid(row=8, column=2, columnspan=2, padx=5, pady=5)
-        self.directions_entry = tk.Button(self, text='Add Directions', command=lambda: self.add_recipe_element_Ing_Dir_Note(parent, recipe_elements[1]))
-        self.directions_entry.grid(row=9, column=2, columnspan=2, padx=5, pady=5)
-        self.notes_entry = tk.Button(self, text='Add Notes', command=lambda: self.add_recipe_element_Ing_Dir_Note(parent, recipe_elements[2]))
-        self.notes_entry.grid(row=10, column=2, columnspan=2, padx=5, pady=5)
+        element_length = 25
+        widget_entry = {}
+        widgets_text = {'website':'Website title (Ex. All Recipes):','title':'Recipe title:','cuisine':'Cuisine type (Ex. American):','cook time':'Cook Time (minutes, rounded):',
+                        'servings':'Servings (grams, rounded):','nutrition':'Nutrition:','picture':'Picture:','ingredients':'Ingredients:', 'directions':'Directions:','notes':'Notes:'}
+        for i, (key, value) in enumerate(widgets_text.items()):
+            label = tk.Label(self, text=value, anchor='w', width=element_length)
+            label.grid(row=i, column=0, padx=5, pady=5)
+            if key not in ['ingredients', 'directions', 'notes']:
+                widget_entry[key] = tk.Entry(self, width=element_length)
+                widget_entry[key].grid(row=i, column=1, padx=5, pady=5)
+            else:
+                widget_entry[key] = tk.Button(self, text=f'Add {key}', command=lambda: self.add_long_recipe_element(parent, key), width=element_length)
+                widget_entry[key].grid(row=i, column=1, columnspan=2, padx=5, pady=5)
 
         self.recipe_element_value = ['','','']
-
-        '''recipe = [self.website_title_entry.get(), self.title_entry.get(), self.cuisine_entry.get(),
-                  self.servings_entry.get(), self.serving_size_entry.get(), self.nutrition_info_entry.get(),
-                  self.picture_entry.get(), self.recipe_element_value[0], self.recipe_element_value[1],
-                  self.recipe_element_value[2]]'''
-
         self.submit_recipe_button = tk.Button(self, text='Add Recipe', command=lambda: self.create_recipe())
         self.submit_recipe_button.grid(row=11, column=0, columnspan=4)
 
         self.counter = 1
 
     def create_recipe(self):
-        recipe = Recipe()
-        recipe.input(self.website_title_entry.get(), self.title_entry.get(), self.cuisine_entry.get(),
+        with open(self.picture_entry.get(), 'rb') as binary_reader:
+            self.picture_entry = binary_reader.read()
+
+        recipe = Recipe(self.website_title_entry.get(), self.title_entry.get(), self.cuisine_entry.get(),
                   self.cook_time_entry.get(), self.servings_entry.get(), self.serving_size_entry.get(),
-                  self.nutrition_info_entry.get(), self.picture_entry.get(), self.recipe_element_value[0],
+                  self.nutrition_info_entry.get(), self.picture_entry, self.recipe_element_value[0],
                   self.recipe_element_value[1], self.recipe_element_value[2])
-        for k, v in vars(recipe).items():
-            print(k, v)
         file_name = self.determine_file_name(recipe.title)
         rec_ID = self.determine_rec_ID() 
         self.file_writer(file_name, recipe)
@@ -393,27 +353,26 @@ class Manual_Recipe_Adder(tk.Frame):
                                     Notes: {recipe[10]}
                                                 ''')
 
-    def add_recipe_element_Ing_Dir_Note(self, parent, recipe_element):
+    def add_long_recipe_element(self, parent, recipe_element):
         top = tk.Toplevel(parent)
 
         self.recipe_element_label = tk.Label(top, text=recipe_element)
         self.recipe_element_label.grid(row=0, column=0)
         self.entry = tk.scrolledtext.ScrolledText(top, width=40, height=10)
         self.entry.grid(row=1, column=0)
-        self.confirm_button = tk.Button(top, text=f"Add {recipe_element}", command=lambda: self.close(top, recipe_element))
+        self.confirm_button = tk.Button(top, text=f"Add {recipe_element}", command=lambda: close(top, recipe_element))
         self.confirm_button.grid(row=2, column=0)
 
-    def close(self, top, recipe_element):
-        label_counter = ['ingredients', 'directions', 'notes'].index(f'{recipe_element}')
-        row_number = label_counter + 8
+        def close(top, recipe_element):
+            label_counter = ['ingredients', 'directions', 'notes'].index(f'{recipe_element}')
+            row_number = label_counter + 8
 
+            self.recipe_element_value[label_counter] = self.entry.get('1.0', tk.END)
 
-        self.recipe_element_value[label_counter] = self.entry.get('1.0', tk.END)
+            top.destroy()
 
-        top.destroy()
-
-        self.testlabel = tk.Label(self, text=f'{recipe_element} added')
-        self.testlabel.grid(row=row_number, column=5, padx=5, pady=5)
+            self.testlabel = tk.Label(self, text=f'{recipe_element} added')
+            self.testlabel.grid(row=row_number, column=5, padx=5, pady=5)
 
 
     def add_recipe_to_folder(self):

@@ -1,5 +1,5 @@
 import os, bs4, requests
-from Recipe_Classes import *
+from Class_Recipe import *
 
 website_title_html_info = {"tasteofhome": ['h1', 'recipe-title']}
 website_ingredient_html_info = {"tasteofhome": ['ul', 'recipe-ingredients__list recipe-ingredients__collection splitColumns', 'li'],}

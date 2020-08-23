@@ -1,8 +1,7 @@
-class Recipe:
-    def __init__(self):
-        pass
+from Class_Database import *
 
-    def input(self, website_name, title, cuisine, cook_time, servings, serving_size, ingredients, directions,
+class Recipe:
+    def __init__(self, website_name, title, cuisine, cook_time, servings, serving_size, ingredients, directions,
                  nutrition_info, notes, picture):
         self.rec_id: int = 0
         self.website_name: str = website_name
@@ -33,14 +32,9 @@ class Recipe:
         'Picture':{self.picture}'''
         return  recipe_string   
 
-    def add(self, rec_id, website_name, title, cuisine, cook_time, servings, serving_size, ingredients, directions,
-             nutrition_info, notes, picture):
-        pass
-
     def file_writer(self, file_name, *arg, **kwarg):
         with open(file_name, 'w') as RecipeWriter:
-            RecipeWriter.write(f''' Recipe Identifier: {kwarg}
-                                    Website title: {self.website_name}
+            RecipeWriter.write(f''' Website title: {self.website_name}
                                     Recipe title: {self.title}
 
                                     Cuisine type: {self.cuisine}
