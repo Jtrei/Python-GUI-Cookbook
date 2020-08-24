@@ -1,5 +1,4 @@
 import os, bs4, requests
-from Class_Recipe import *
 
 website_title_html_info = {"tasteofhome": ['h1', 'recipe-title']}
 website_ingredient_html_info = {"tasteofhome": ['ul', 'recipe-ingredients__list recipe-ingredients__collection splitColumns', 'li'],}
@@ -32,8 +31,6 @@ class Scraper:
                 for element in self.soup.find_all(parent_heading, class_=class_name):
                     for child_heading in element:
                         self.ingredients.append(child_heading.get_text())
-        print("title: ", self.title)
-        print("Ingredients: ", self.ingredients)
 
 #crape = Scraper('https://www.tasteofhome.com/recipes/best-ever-potato-soup/')
 #crape.scrape_recipe()
@@ -88,7 +85,6 @@ def all_recipes(Web_recipe):
         Web_recipe.serving_size = div_C_ParseList(html_class[elements])
         Web_recipe.ingredients = li_C_ParseList(html_class[elements])
         Web_recipe.directions = span_C_ParseList(html_class[elements])
-        print(Web_recipe.title)
     except:
         pass
 
@@ -112,7 +108,6 @@ def add_recipe_scraping(rec_id, website_name, title, cuisine, cook_time, serving
                      'nutrition_info': nutrition_info, 'notes': notes, 'picture': food_photo})
         connection.commit()
         connection.close()
-        print("Recipe Added!")
 
 
 def MainExtraction():

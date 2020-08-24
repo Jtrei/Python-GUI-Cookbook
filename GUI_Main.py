@@ -1,13 +1,14 @@
 import configparser
 import sys
+import io
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 
 from PIL import Image, ImageTk
 
-from Class_Database import *
-from Class_Recipe import *
+from Accessory_Classes import *
+
 from Error_Handling import *
 from Extractor import *
 
@@ -15,11 +16,12 @@ from Extractor import *
 # GLOBALS: Directories
 folder_path_to_data_folder = os.path.join(os.getcwd(), 'Data')                                               # .\Data
 folder_path_to_configuration_directory = os.path.join(folder_path_to_data_folder, 'Configuration')           # .\Data\Configuration
-folder_path_to_database: str = os.path.join(folder_path_to_data_folder, 'Database')                          # .\Data\Database
+folder_path_to_database = os.path.join(folder_path_to_data_folder, 'Database')                          # .\Data\Database
 # Files
 file_path_to_database: str = os.path.join(folder_path_to_database, 'Global.db')                              # .\Data\Database\Global.db
 # Data Structures
-current_user_info: dict = {'username':'','recipe folder file path':'','recipe database file path':'','recipe picture folder file path':''}
+current_user_info: dict = {'username':'','recipe folder file path':'','recipe picture folder file path':''}
+database = Database(file_path_to_database)
 # Widget_positioning
 x_in = 10
 y_down = 3
@@ -33,8 +35,7 @@ def startup_settings():
         os.mkdir(folder_path_to_data_folder)
         os.mkdir(folder_path_to_configuration_directory)
         os.mkdir(folder_path_to_database)
-        global_database = Database(file_path_to_database)
-        global_database.initialize()
+        database.initialize()
 
         os.chdir(folder_path_to_configuration_directory)
 
@@ -56,10 +57,6 @@ class StartupGUI(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
-        def submenu_configuration(submenu_items, menu):
-            for i, (key, value) in enumerate(submenu_items.items()):
-                menu.add_command(label=key, command=lambda: self.menu_check(value))    
-
         container = tk.Frame(self)
         container.pack(side="top", fill='both', expand=True)
         container.grid_rowconfigure(0, weight=1)
@@ -67,22 +64,23 @@ class StartupGUI(tk.Tk):
 
         upper_menu_bar = tk.Menu(container)
         tk.Tk.config(self, menu=upper_menu_bar)
-        drop_down_headers = ('Recipes', 'Edit')
         
         recipe_sub_menu = tk.Menu(upper_menu_bar, tearoff=0)
-        recipe_submenu_buttons = {'Add recipe': Manual_Recipe_Adder, 'Add recipe from website': OnlineRecipeTool, 'Browse recipes': RecipeList,
-                                  'Import Recipes (from text file)': '', 'Export Recipes (to PDF)': ''}
-        submenu_configuration(recipe_submenu_buttons, recipe_sub_menu)
         upper_menu_bar.add_cascade(label='Recipes', menu=recipe_sub_menu)
-
+        recipe_sub_menu.add_command(label='Add recipe', command=lambda: self.menu_check(Manual_Recipe_Adder))
+        recipe_sub_menu.add_command(label='Add recipe from website', command=lambda: self.menu_check(Online_Recipe_Adder)) 
+        recipe_sub_menu.add_command(label='Browse recipes', command=lambda: self.menu_check(Recipe_Browser)) 
+        recipe_sub_menu.add_command(label='Import Recipes (from text file)', command=lambda: self.menu_check(Import_Recipes_From_Text)) 
+        recipe_sub_menu.add_command(label='Export Recipes (to PDF)', command=lambda: self.menu_check(Export_Recipe_To_PDF))  
         edit_sub_menu = tk.Menu(upper_menu_bar, tearoff=0)
-        edit_submenu_buttons = {'Edit Recipe': '', 'Edit Settings': '', 'Edit View': ''}
-        submenu_configuration(edit_submenu_buttons, edit_sub_menu)
-        upper_menu_bar.add_cascade(label=drop_down_headers[1], menu=edit_sub_menu)
-
+        upper_menu_bar.add_cascade(label='Edit', menu=edit_sub_menu)
+        edit_sub_menu.add_command(label='Edit Recipe', command=Edit_Recipe) 
+        edit_sub_menu.add_command(label='Edit Settings', command=Edit_Settings) 
+        edit_sub_menu.add_command(label='Edit View', command=Edit_View)  
 
         self.frames = {}
-        gui_frames = [LoginPage, AccountCreationPage, Main_Page, Recipe_Browser, OnlineRecipeTool, Manual_Recipe_Adder]
+        gui_frames = [LoginPage, AccountCreationPage, Main_Page, Manual_Recipe_Adder, Online_Recipe_Adder, Recipe_Browser, Import_Recipes_From_Text, Export_Recipe_To_PDF,
+                      Edit_Recipe, Edit_Settings, Edit_View]
         for Frame in gui_frames: 
             frame = Frame(container, self) 
             self.frames[Frame] = frame # self.frames[LoginPage] = LoginPage[container, self]
@@ -96,7 +94,7 @@ class StartupGUI(tk.Tk):
         frame.tkraise()            
 
     def menu_check(self, page):
-        # If the user has not logged in yet and updated their current user info, the menu should not lead to additional pages.
+        #If the user has not logged in yet and updated their current user info, the menu should not lead to additional pages.
         if current_user_info['username'] != '':
             self.show_frame(page)
 
@@ -128,8 +126,7 @@ class LoginPage(tk.Frame):
         # Searches login database to see if previous user wanted to remain logged in. The .keep_logged_in method below
         # ensures that only one user will have a "1" value in the database column for keep_logged. If so, the fields will
         # become pre-populated.
-        database_query = Database(file_path_to_database)
-        username, password, keep_logged = database_query.query_on_startup()
+        username, password, keep_logged = database.query_on_startup()
         if keep_logged == '1':
             self.username_entry.insert(0, f"{username}")
             self.password_entry.insert(0, f"{password}")
@@ -137,17 +134,15 @@ class LoginPage(tk.Frame):
         
     def login_function(self, username, password, keep_logged):
         global current_user_info
-        login_database_checker_updater = Database(file_path_to_database)
         try:
-            username_db, password_db = login_database_checker_updater.login(username, password)
+            username_db, password_db = database.login(username, password)
             if username_db == username and password_db == password: 
                 if keep_logged == 1:
                     # Checks to see if user wishes to remain logged in. Sets database value to "1" for user and "0" for others
-                    login_database_checker_updater.update_logged_in(username)
+                    database.update_logged_in(username)
                 current_user_info['username'] = username
                 current_user_info['recipe folder file path'] = f'{folder_path_to_database}\\{username}_Recipes'
-                current_user_info['recipe database file path'] = f'{user_folder}\\{username}.db'
-                current_user_info['recipe picture folder file path'] = f'{user_folder}\\Recipe_Pictures'
+                current_user_info['recipe picture folder file path'] = f"{current_user_info['recipe folder file path']}\\Recipe_Pictures"
                 self.controller.show_frame(Main_Page)
         # Occurs when there is no database match resulting in no return of username_db and password_db
         except TypeError: 
@@ -162,8 +157,7 @@ class AccountCreationPage(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.controller = controller
 
-        labels = ['Username: ', 'Password: ', 'Password Confirm: ']
-        for i, label_name in enumerate(labels):
+        for i, label_name in enumerate(['Username: ', 'Password: ', 'Password Confirm: ']):
             label = tk.Label(self, text=label_name)
             label.grid(row=i, column=0, padx=x_in, pady=y_down, sticky='w')
 
@@ -187,10 +181,8 @@ class AccountCreationPage(tk.Frame):
         if password == password_confirmation and len(username) > 3 and len(password) > 3 and not os.path.exists(user_folder):
             os.mkdir(user_folder)
             os.mkdir(user_recipe_pictures)
-            db_log_writer = Database(file_path_to_database)
-            db_log_writer.add_new_account(username, password, user_folder)
-            db_recipe_writer = Database(user_recipe_db)
-            db_recipe_writer.create_new_recipe_database(username)
+            database.add_new_account(username, password)
+            database.create_new_recipe_table(username)
             return self.controller.show_frame(LoginPage)
         else: # Error handling if username and password combination is too short, if password does not match, or username is taken
             text_response = account_creation_error(username, password, password_confirmation, user_folder)
@@ -203,34 +195,32 @@ class Main_Page(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
+        self.status = tk.Label(self)
 
         self.pic_index = 0
 
-
-
-        # Eventual plans will have the main page access the database and pull photos from the user's recipe collection
-        '''
-        self.photos = [photo for photo in os.listdir(current_user_info['recipe picture folder file path']) if os.path.isfile]
-        self.photo_length = len(self.photos)
-        if self.photo_length > 0:
+        try:
+            byte_photo_data = database.return_photo_list()
+            self.photos = [io.BytesIO(photo) for photo in byte_photo_data]
+            self.photo_length = len(self.photos)
             self.welcome_label = tk.Label(self, text="Welcome to my cooking app. Looks yummy.")
             self.welcome_label.grid(row=0, column=0, columnspan=4, sticky=tk.W)
             self.display_picture = self.photos[self.pic_index]
-            self.my_image = ImageTk.PhotoImage(Image.open(f"{current_user_info['recipe picture folder file path']}\\{self.display_picture}"))
+            self.my_image = ImageTk.PhotoImage(self.display_picture)
             self.myLabel = tk.Label(self, image=self.my_image)
             self.myLabel.grid(row=1, column=0, columnspan=4)
 
-            button_back = tk.Button(self, text='<', command=self.pic_previous('backward'))
+            button_back = tk.Button(self, text='<', command=self.pic_change('backward'))
             button_back.grid(row=3, column=1)
-            button_forward = tk.Button(self, text='>', command=self.pic_forward('forward'))
+            button_forward = tk.Button(self, text='>', command=self.pic_change('forward'))
             button_forward.grid(row=3, column=3)
 
             self.status = tk.Label(self, text=f'Image: {self.display_picture}', bd=1, relief=tk.SUNKEN)
             self.status.grid(row=4, column=0, columnspan=4)
-        else:
-            self.welcome_label = tk.Label(self, text="Welcome to my cooking app. It is a WIP. Your recipe's photos will appear here once you add some recipes")
+        except (IndexError or sql.OperationalError):
+            self.welcome_label = tk.Label(self, text="Welcome to my cooking app. It is a WIP. All user's photos will appear here once you add some recipes")
             self.welcome_label.grid(row=0, column=0, columnspan=4, sticky=tk.W)
-            
+                
 
     def pic_change(self, val):
         self.myLabel.grid_forget()
@@ -246,100 +236,105 @@ class Main_Page(tk.Frame):
         self.myLabel.grid(row=1, column=0, columnspan=4)
         self.status = tk.Label(self, text=f'Image: {self.display_picture}', bd=1, relief=tk.SUNKEN)
         self.status.grid(row=4, column=0, columnspan=4)
-        '''
-
-class RecipeList(tk.Frame):
-    def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
 
 class Manual_Recipe_Adder(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
         element_length = 25
-        widget_entry = {}
+        self.widget_entry = {}
         widgets_text = {'website':'Website title (Ex. All Recipes):','title':'Recipe title:','cuisine':'Cuisine type (Ex. American):','cook time':'Cook Time (minutes, rounded):',
-                        'servings':'Servings (grams, rounded):','nutrition':'Nutrition:','picture':'Picture:','ingredients':'Ingredients:', 'directions':'Directions:','notes':'Notes:'}
+                        'servings':'Servings (grams, rounded):','serving size': 'Serving size: ','picture':'Picture:','ingredients':'Ingredients:','directions':'Directions:','nutrition':'Nutrition:',
+                        'notes':'Notes:'}
+        self.long_response_recipe_components = {'ingredients':'','directions':'','nutrition':'','notes':''}
         for i, (key, value) in enumerate(widgets_text.items()):
-            label = tk.Label(self, text=value, anchor='w', width=element_length)
-            label.grid(row=i, column=0, padx=5, pady=5)
-            if key not in ['ingredients', 'directions', 'notes']:
-                widget_entry[key] = tk.Entry(self, width=element_length)
-                widget_entry[key].grid(row=i, column=1, padx=x_in, pady=y_down)
+            self.label = tk.Label(self, text=value, anchor='w', width=element_length)
+            self.label.grid(row=i, column=0, padx=5, pady=5)
+            if key not in list(self.long_response_recipe_components.keys()):
+                self.widget_entry[key] = tk.Entry(self, width=element_length)
+                self.widget_entry[key].grid(row=i, column=1, padx=x_in, pady=y_down)
             else:
-                widget_entry[key] = tk.Button(self, text=f'Add {key}', command=lambda: self.add_long_recipe_element(parent, key), width=element_length)
-                widget_entry[key].grid(row=i, column=1, columnspan=2, padx=x_in, pady=y_down)
+                self.widget_entry[key] = tk.Button(self, text=f'Add {key}', command=lambda: self.popup_for_longer_entries(parent, key, i), width=element_length)
+                self.widget_entry[key].grid(row=i, column=1, columnspan=2, padx=x_in, pady=y_down)
 
-        self.recipe_element_value = ['','','']
-        self.submit_recipe_button = tk.Button(self, text='Add Recipe', command=lambda: self.create_recipe())
-        self.submit_recipe_button.grid(row=11, column=0, columnspan=4)
-
-        self.counter = 1
+        submit_recipe_button = tk.Button(self, text='Add Recipe', command=lambda: self.create_recipe())
+        submit_recipe_button.grid(row=11, column=0, columnspan=4)
 
     def create_recipe(self):
-        with open(self.picture_entry.get(), 'rb') as binary_reader:
-            self.picture_entry = binary_reader.read()
+        self.log_response = tk.Label(self, text='Dummy response whose only purpose is to be destroyed') 
 
-        recipe = Recipe(self.website_title_entry.get(), self.title_entry.get(), self.cuisine_entry.get(),
-                  self.cook_time_entry.get(), self.servings_entry.get(), self.serving_size_entry.get(),
-                  self.nutrition_info_entry.get(), self.picture_entry, self.recipe_element_value[0],
-                  self.recipe_element_value[1], self.recipe_element_value[2])
-        file_name = self.determine_file_name(recipe.title)
-        rec_ID = self.determine_rec_ID() 
-        self.file_writer(file_name, recipe)
-
-    def determine_rec_ID(self):
-        unique_database_ID = Database(file_path_to_database)
-        rec_ID = unique_database_ID.rec_ID_return()
-
-    def determine_file_name(self, recipe):
-        if not os.path.exists(f'{recipe}.txt'):
-            file_name = f'{recipe}.txt'
-        else:
+        def convert_picture_path_to_binary_data(file_path):
             while True:
-                self.counter += 1
-                if not os.path.exists(f'{recipe}_{self.counter}.txt'):
-                    file_name = f'{recipe}_{self.counter}.txt'
-                    self.counter = 1
+                self.log_response.destroy()
+                if file_path != '':
+                    try:
+                        with open(file_path, 'rb') as binary_reader:
+                            binary_data = binary_reader.read()
+                            return binary_data
+                    except FileNotFoundError:
+                        self.log_response = tk.Label(self, text='Picture file not found. Please check file location again or leave space blank')
+                        self.log_response.grid(row=12, column=0, columnspan=2, padx=x_in, sticky='w')
+                else: 
                     break
-        return file_name
 
-    def file_writer(self, file_name, recipe):
+        picture_binary_data = convert_picture_path_to_binary_data(self.widget_entry['picture'].get())
+
+        recipe = Recipe(self.widget_entry['website'].get(), self.widget_entry['title'].get(), self.widget_entry['cuisine'].get(),
+                self.widget_entry['cook time'].get(), self.widget_entry['servings'].get(), self.widget_entry['serving size'].get(),
+                self.long_response_recipe_components['ingredients'], self.long_response_recipe_components['directions'],
+                self.long_response_recipe_components['nutrition'], self.long_response_recipe_components['notes'], picture_binary_data)
+
+        database.write_recipe_to_database(recipe, current_user_info['username'])
+
+        self.file_writer(recipe)
+
+        self.log_response = tk.Label(self, text='Recipe Added!')
+        self.log_response.grid(row=12, column=0, columnspan=2, padx=x_in, sticky='w')
+
+    def file_writer(self, recipe):
+        os.chdir(current_user_info['recipe folder file path'])
+        
+        def determine_unique_file_name(recipe_title):
+            duplicate_recipe_name_counter = 1
+            if not os.path.exists(f'{recipe_title}.txt'):
+                file_name = f'{recipe_title}.txt'
+            else:
+                while True:
+                    duplicate_recipe_name_counter += 1
+                    if not os.path.exists(f'{recipe_title}_{duplicate_recipe_name_counter}.txt'):
+                        file_name = f'{recipe_title}_{duplicate_recipe_name_counter}.txt'
+                        break
+            return file_name
+
+        file_name = determine_unique_file_name(recipe.title)
+
         with open(file_name, 'w') as RecipeWriter:
-            RecipeWriter.write(f'''Website title: {recipe[0]}
-                                    Recipe title: {recipe[1]}
+            RecipeWriter.write(f'''
+Website name: {recipe.website_name}
+Recipe title: {recipe.title}\n
+Cuisine type: {recipe.cuisine}
+Servings: {recipe.servings}
+Serving Size: {recipe.serving_size}
+Cook time: {recipe.cook_time} minutes
+Nutrition info: {recipe.nutrition_info}\n
+Ingredients: {recipe.ingredients}
+Directions: {recipe.directions}
+Notes: {recipe.notes}
+                                ''')
 
-                                    Cuisine type: {recipe[2]}
-                                    Servings: {recipe[5]}
-                                    Serving Size: {recipe[4]}
-                                    Cook time: {recipe[3]} minutes
-                                    Nutrition info: {recipe[6]}
-
-                                    Ingredients: {recipe[8]}
-                                    Directions: {recipe[9]}
-                                    Notes: {recipe[10]}
-                                                ''')
-
-    def add_long_recipe_element(self, parent, recipe_element):
+    def popup_for_longer_entries(self, parent, recipe_element, index):
         top = tk.Toplevel(parent)
 
         self.recipe_element_label = tk.Label(top, text=recipe_element)
         self.recipe_element_label.grid(row=0, column=0)
         self.entry = tk.scrolledtext.ScrolledText(top, width=40, height=10)
         self.entry.grid(row=1, column=0)
-        self.confirm_button = tk.Button(top, text=f"Add {recipe_element}", command=lambda: close(top, recipe_element))
+        self.confirm_button = tk.Button(top, text=f"Add {recipe_element}", command=lambda: close(top, recipe_element, index))
         self.confirm_button.grid(row=2, column=0)
 
-        def close(top, recipe_element):
-            label_counter = ['ingredients', 'directions', 'notes'].index(f'{recipe_element}')
-            row_number = label_counter + 8
-
-            self.recipe_element_value[label_counter] = self.entry.get('1.0', tk.END)
-
+        def close(top, recipe_element, index):
+            self.long_response_recipe_components[index] = self.entry.get('1.0', tk.END)
             top.destroy()
-
-            self.testlabel = tk.Label(self, text=f'{recipe_element} added')
-            self.testlabel.grid(row=row_number, column=5, padx=5, pady=5)
 
 
     def add_recipe_to_folder(self):
@@ -349,14 +344,33 @@ class Manual_Recipe_Adder(tk.Frame):
     def add_recipe_attributes_to_recipe_browser(self):
         pass
 
+class Online_Recipe_Adder(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
 class Recipe_Browser(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
-class OnlineRecipeTool(tk.Frame):
+class Import_Recipes_From_Text(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
+class Export_Recipe_To_PDF(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+class Edit_Recipe(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+class Edit_Settings(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+class Edit_View(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
 
 def main_program():
     startup_settings() 
