@@ -1,42 +1,47 @@
-import sqlite3 as sql 
+import sqlite3 as sql
 import os, sys
 
+
 class Database:
-    def __init__(self, pathway): 
+    def __init__(self, pathway):
         self.pathway: str = pathway
 
     # Account creation and login Methods - ACM
     def initialize(self):
         connection = sql.connect(self.pathway)
         cursor = connection.cursor()
-        cursor.execute(f'''CREATE TABLE IF NOT EXISTS Login (
+        cursor.execute(
+            f"""CREATE TABLE IF NOT EXISTS Login (
                         username text, 
                         password text, 
                         logged_in text, 
                         ID text)
-                        ''')
+                        """
+        )
         connection.commit()
         connection.close()
 
     # ACM
     def add_new_account(self, username, password):
-        
-        def check_return_ID(): # Used to calculate unique ID code per account
+        def check_return_ID():  # Used to calculate unique ID code per account
             connection = sql.connect(self.pathway)
             cursor = connection.cursor()
-            cursor.execute("SELECT * FROM Login")  
+            cursor.execute("SELECT * FROM Login")
             result = cursor.fetchall()
             connection.close()
             if result == []:
                 return "1"
             else:
-                return str(((result[0])[0])+1)
+                return str(((result[0])[0]) + 1)
 
         user_id: str = check_return_ID()
-        logged_in: str = '0'
+        logged_in: str = "0"
         connection = sql.connect(self.pathway)
         cursor = connection.cursor()
-        cursor.execute(f"INSERT INTO Login(username, password, logged_in, ID) VALUES (?,?,?,?);", (username, password, logged_in, user_id))
+        cursor.execute(
+            f"INSERT INTO Login(username, password, logged_in, ID) VALUES (?,?,?,?);",
+            (username, password, logged_in, user_id),
+        )
         connection.commit()
         connection.close()
 
@@ -44,7 +49,8 @@ class Database:
     def create_new_recipe_table(self, username):
         connection = sql.connect(self.pathway)
         cursor = connection.cursor()
-        cursor.execute(f'''CREATE TABLE IF NOT EXISTS {username}_Recipes ( 
+        cursor.execute(
+            f"""CREATE TABLE IF NOT EXISTS {username}_Recipes ( 
                        rec_ID integer,
                        website_name text, 
                        title text, 
@@ -56,7 +62,8 @@ class Database:
                        directions text,
                        nutrition_info text, 
                        notes text, 
-                       picture blob)''')
+                       picture blob)"""
+        )
         connection.commit()
         connection.close()
 
@@ -67,16 +74,16 @@ class Database:
             cursor.execute(f"SELECT * FROM Login")
             table = cursor.fetchall()
             for entry in table:
-                if entry[2] == '1':
+                if entry[2] == "1":
                     username, password, keep_logged = (entry[0], entry[1], entry[2])
             connection.commit()
             connection.close()
             if keep_logged == "1":
-                return username, password, keep_logged 
+                return username, password, keep_logged
             else:
-                return '','','0'
+                return "", "", "0"
         except:
-            return '', '', '0'
+            return "", "", "0"
 
     def login(self, username, password):
         connection = sql.connect(self.pathway)
@@ -97,10 +104,10 @@ class Database:
         for entry in table:
             user = entry[0]
             if user == username:
-                logged = '1'
+                logged = "1"
             else:
-                logged = '0'
-            query: str =  f""" UPDATE Login
+                logged = "0"
+            query: str = f""" UPDATE Login
                                SET logged_in = '{logged}'
                                WHERE username = '{user}'"""
             cursor.execute(query)
@@ -110,7 +117,6 @@ class Database:
         connection.close()
 
     def write_recipe_to_database(self, recipe, username):
-
         def rec_ID_return(username):
             connection = sql.connect(self.pathway)
             cursor = connection.cursor()
@@ -124,9 +130,24 @@ class Database:
         id_num = rec_ID_return(username)
         connection = sql.connect(self.pathway)
         cursor = connection.cursor()
-        cursor.execute(f"""INSERT INTO {username}_Recipes(rec_ID, website_name, title, cuisine, cook_time, servings, serving_size, ingredients, directions, nutrition_info, notes, picture) 
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?);""", (id_num, recipe.website_name, recipe.title, recipe.cuisine, recipe.cook_time, recipe.servings, 
-               recipe.serving_size, recipe.ingredients, recipe.directions, recipe.nutrition_info, recipe.notes, recipe.picture))
+        cursor.execute(
+            f"""INSERT INTO {username}_Recipes(rec_ID, website_name, title, cuisine, cook_time, servings, serving_size, ingredients, directions, nutrition_info, notes, picture) 
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?);""",
+            (
+                id_num,
+                recipe.website_name,
+                recipe.title,
+                recipe.cuisine,
+                recipe.cook_time,
+                recipe.servings,
+                recipe.serving_size,
+                recipe.ingredients,
+                recipe.directions,
+                recipe.nutrition_info,
+                recipe.notes,
+                recipe.picture,
+            ),
+        )
         connection.commit()
         connection.close()
 
@@ -145,17 +166,26 @@ class Database:
                     photo_list.append(user[-1])
                 except IndexError:
                     pass
-                    #print(f'user {entry[0]} does not have any photos')
+                    # print(f'user {entry[0]} does not have any photos')
         connection.close()
         return photo_list
 
 
-
-
-
 class Recipe:
-    def __init__(self, website_name, title, cuisine, cook_time, servings, serving_size, ingredients, directions,
-                 nutrition_info, notes, picture):
+    def __init__(
+        self,
+        website_name,
+        title,
+        cuisine,
+        cook_time,
+        servings,
+        serving_size,
+        ingredients,
+        directions,
+        nutrition_info,
+        notes,
+        picture,
+    ):
         self.website_name = website_name
         self.title = title
         self.cuisine = cuisine
@@ -169,7 +199,7 @@ class Recipe:
         self.picture = picture
 
     def __repr__(self):
-        return f'''
+        return f"""
         'website':{self.website_name}, 
         'title':{self.title}, 
         'cuisine':{self.cuisine}, 
@@ -181,11 +211,12 @@ class Recipe:
         'nutrition_info':{self.nutrition_info}, 
         'Notes':{self.notes},
         'Picture':{self.picture}
-        '''
+        """
 
     def file_writer(self, file_name, *arg, **kwarg):
-        with open(file_name, 'w') as RecipeWriter:
-            RecipeWriter.write(f''' Website title: {self.website_name}
+        with open(file_name, "w") as RecipeWriter:
+            RecipeWriter.write(
+                f""" Website title: {self.website_name}
                                     Recipe title: {self.title}
 
                                     Cuisine type: {self.cuisine}
@@ -204,5 +235,5 @@ class Recipe:
                                     
                                     Notes: 
                                     {self.Notes}
-                                                ''')
-    
+                                                """
+            )
