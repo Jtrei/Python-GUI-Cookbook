@@ -1,5 +1,6 @@
 import sqlite3 as sql
 
+
 class Database:
     def __init__(self, pathway):
         self.db_file_pathway: str = pathway

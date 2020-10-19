@@ -2,7 +2,7 @@ import os
 from src.Accessory_Classes import Database
 import configparser
 
-#------------------------------------------------GLOBALS:
+# ------------------------------------------------GLOBALS:
 # -----------------Directories
 folder_path_to_data_folder: str = os.path.join(os.getcwd(), "Data")
 # .\Data
@@ -15,7 +15,7 @@ folder_path_to_database: str = os.path.join(
 )
 # .\Data\Database
 
-#------------------Files
+# ----------------- Files
 file_path_to_database: str = os.path.join(
     folder_path_to_database, "Global.db"
 )  # .\Data\Database\Global.db
@@ -27,6 +27,7 @@ current_user_info: dict = {
     "recipe picture folder file path": "",
 }
 database = Database(file_path_to_database)
+
 
 # --- Startup Functions --- Create directories, files, and database if not already existing
 def startup_settings() -> None:
